@@ -21,24 +21,25 @@ namespace VacationRental.Api.Controllers
         }
 
         [HttpGet]
-        public CalendarViewModel Get(int rentalId, DateTime start, int nights)
+        public IActionResult Get(int rentalId, DateTime start, int nights)
         {
             if (nights < 0)
-                throw new ApplicationException("Nights must be positive");
+                return this.BadRequest("Nights must be positive");
             if (!_rentals.ContainsKey(rentalId))
-                throw new ApplicationException("Rental not found");
+                return this.NotFound("Rental not found");
 
-            var result = new CalendarViewModel 
+            var result = new CalendarViewModel
             {
                 RentalId = rentalId,
-                Dates = new List<CalendarDateViewModel>() 
+                Dates = new List<CalendarDateViewModel>()
             };
             for (var i = 0; i < nights; i++)
             {
                 var date = new CalendarDateViewModel
                 {
                     Date = start.Date.AddDays(i),
-                    Bookings = new List<CalendarBookingViewModel>()
+                    Bookings = new List<CalendarBookingViewModel>(),
+                    PreparationTimes = new List<PreparationTimeViewModel>()
                 };
 
                 foreach (var booking in _bookings.Values)
@@ -46,14 +47,15 @@ namespace VacationRental.Api.Controllers
                     if (booking.RentalId == rentalId
                         && booking.Start <= date.Date && booking.Start.AddDays(booking.Nights) > date.Date)
                     {
-                        date.Bookings.Add(new CalendarBookingViewModel { Id = booking.Id });
+                        date.Bookings.Add(new CalendarBookingViewModel { Id = booking.Id, Unit = booking.Unit });
+                        date.PreparationTimes.Add(new PreparationTimeViewModel() { Unit = booking.Unit });
                     }
                 }
 
                 result.Dates.Add(date);
             }
 
-            return result;
+            return this.Ok(result);
         }
     }
 }
